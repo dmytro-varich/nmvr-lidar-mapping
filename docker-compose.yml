@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  ros2_jazzy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ros2_jazzy_dev
+    container_name: ros2_jazzy_container
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      # Forward X11 graphics to the host system
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Mount the code from the local folder into the container
+      - ./:/workspace
+    working_dir: /workspace
+    stdin_open: true
+    tty: true

@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y \
     cmake \
     build-essential \
     ninja-build \
+    wget \
+    curl \
+    sudo \
+    lsb-release \
     gstreamer1.0-plugins-bad \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-ugly \

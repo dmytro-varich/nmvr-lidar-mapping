@@ -16,6 +16,11 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       # Mount the code from the local folder into the container
       - ./:/workspace
+      # Mount the Gazebo models from the local folder into the container
+      - ./px4_models/x500_lidar:/PX4-Autopilot/Tools/simulation/gz/models/x500_lidar
+    devices:
+      # Allow the container to access the GPU for rendering
+      - /dev/dri:/dev/dri
     working_dir: /workspace
     stdin_open: true
     tty: true

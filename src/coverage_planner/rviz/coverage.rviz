@@ -1,0 +1,48 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: map
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 1
+      Plane Cell Count: 40
+      Reference Frame: <Fixed Frame>
+    - Class: rviz_default_plugins/Path
+      Name: Coverage Path
+      Enabled: true
+      Topic:
+        Value: /coverage/path
+        Depth: 5
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+      Color: 25; 255; 0
+      Alpha: 1
+      Buffer Length: 1
+      Line Style: Lines
+      Line Width: 0.03
+      Pose Style: None
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Name: Current View
+      Target Frame: <Fixed Frame>
+      Scale: 25
+      X: 10
+      Y: 5
+      Angle: 0
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+Window Geometry:
+  Width: 1200
+  Height: 800

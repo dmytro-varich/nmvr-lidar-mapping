@@ -2,15 +2,15 @@
 
 import rclpy
 from geometry_msgs.msg import Point, PoseStamped
-from nav_msgs.msg import Path
+from nav_msgs.msg import OccupancyGrid, Path
 from rclpy.node import Node
 from visualization_msgs.msg import Marker, MarkerArray
-
 from coverage_planner.coverage import (
     calculate_path_length,
     generate_lawnmower,
 )
-
+from rclpy.parameter import Parameter
+from coverage_planner.grid_map import build_grid
 
 class CoveragePlannerNode(Node):
     """Generate a rectangular coverage route and publish it periodically."""
@@ -25,6 +25,14 @@ class CoveragePlannerNode(Node):
         self.declare_parameter('lane_spacing', 4.0)
         self.declare_parameter('origin_x', 0.0)
         self.declare_parameter('origin_y', 0.0)
+        self.declare_parameter('grid_resolution', 0.5)
+        self.declare_parameter('clearance', 0.5)
+
+        # Flat list: xmin, ymin, xmax, ymax for each obstacle.
+        self.declare_parameter(
+            'obstacles',
+            Parameter.Type.DOUBLE_ARRAY,
+        )
 
         width = self.get_parameter('width').value
         length = self.get_parameter('length').value
@@ -32,6 +40,31 @@ class CoveragePlannerNode(Node):
         spacing = self.get_parameter('lane_spacing').value
         origin_x = self.get_parameter('origin_x').value
         origin_y = self.get_parameter('origin_y').value
+        resolution = self.get_parameter('grid_resolution').value
+        clearance = self.get_parameter('clearance').value
+        obstacle_values = self.get_parameter('obstacles').value or []
+
+        if len(obstacle_values) % 4 != 0:
+            raise ValueError(
+                "Each obstacle requires xmin, ymin, xmax and ymax."
+            )
+
+        obstacles = [
+            tuple(obstacle_values[index:index + 4])
+            for index in range(0, len(obstacle_values), 4)
+        ]
+
+        self.grid = build_grid(
+            origin_x,
+            origin_y,
+            width,
+            length,
+            resolution,
+            obstacles,
+            clearance,
+        )
+
+        self.grid_altitude = altitude
 
         self.waypoints = generate_lawnmower(
             width,
@@ -63,6 +96,29 @@ class CoveragePlannerNode(Node):
             '/coverage/markers',
             10,
         )
+        self.grid_publisher = self.create_publisher(
+            OccupancyGrid,
+            '/coverage/planning_grid',
+            10,
+        )
+
+        self.grid_message = OccupancyGrid()
+        self.grid_message.header.frame_id = 'map'
+
+        info = self.grid_message.info
+        info.resolution = float(self.grid.resolution)
+        info.width = self.grid.columns
+        info.height = self.grid.rows
+        info.origin.position.x = float(self.grid.origin_x)
+        info.origin.position.y = float(self.grid.origin_y)
+        info.origin.position.z = float(self.grid_altitude)
+        info.origin.orientation.w = 1.0
+
+        self.grid_message.data = [
+            100 if (column, row) in self.grid.blocked else 0
+            for row in range(self.grid.rows)
+            for column in range(self.grid.columns)
+        ]
 
         # Republish so subscribers can receive data when started later.
         self.timer = self.create_timer(1.0, self.publish_path)
@@ -100,6 +156,8 @@ class CoveragePlannerNode(Node):
 
         self.publisher.publish(path)
         self.publish_markers(path.header.stamp)
+        self.grid_message.header.stamp = path.header.stamp
+        self.grid_publisher.publish(self.grid_message)import sys
 
     def publish_markers(self, stamp):
         """Publish the survey boundary and the first route waypoint."""

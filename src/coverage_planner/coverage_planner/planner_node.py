@@ -5,10 +5,8 @@ from geometry_msgs.msg import Point, PoseStamped
 from nav_msgs.msg import OccupancyGrid, Path
 from rclpy.node import Node
 from visualization_msgs.msg import Marker, MarkerArray
-from coverage_planner.coverage import (
-    calculate_path_length,
-    generate_lawnmower,
-)
+from coverage_planner.coverage import calculate_path_length
+from coverage_planner.grid_coverage import generate_grid_coverage
 from rclpy.parameter import Parameter
 from coverage_planner.grid_map import build_grid
 
@@ -66,13 +64,14 @@ class CoveragePlannerNode(Node):
 
         self.grid_altitude = altitude
 
-        self.waypoints = generate_lawnmower(
-            width,
-            length,
-            altitude,
-            spacing,
-            origin_x,
-            origin_y,
+        (
+            self.waypoints,
+            lane_count,
+            max_row_gap,
+        ) = generate_grid_coverage(
+            grid=self.grid,
+            altitude=altitude,
+            lane_spacing=spacing,
         )
 
         # Show the survey boundary at the route altitude.
@@ -123,14 +122,12 @@ class CoveragePlannerNode(Node):
         # Republish so subscribers can receive data when started later.
         self.timer = self.create_timer(1.0, self.publish_path)
 
-        lane_count = len(self.waypoints) // 2
-        actual_spacing = length / (lane_count - 1)
         path_length = calculate_path_length(self.waypoints)
 
         self.get_logger().info(
             f'Route ready: {len(self.waypoints)} waypoints, '
-            f'{lane_count} lanes, '
-            f'spacing={actual_spacing:.2f} m, '
+            f'{lane_count} active sweep rows, '
+            f'max row gap={max_row_gap:.2f} m, '
             f'length={path_length:.2f} m'
         )
 
@@ -157,7 +154,7 @@ class CoveragePlannerNode(Node):
         self.publisher.publish(path)
         self.publish_markers(path.header.stamp)
         self.grid_message.header.stamp = path.header.stamp
-        self.grid_publisher.publish(self.grid_message)import sys
+        self.grid_publisher.publish(self.grid_message)
 
     def publish_markers(self, stamp):
         """Publish the survey boundary and the first route waypoint."""
